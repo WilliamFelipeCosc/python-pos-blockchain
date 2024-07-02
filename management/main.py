@@ -1,3 +1,4 @@
+from uuid import uuid4
 from flask import Flask, request, redirect, render_template, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -68,18 +69,42 @@ def ListClients():
 
 @app.route('/client', methods=['POST'])
 def AddClient():
-    if request.method != 'POST':
+    if request.method != 'POST': 
         return jsonify(['Method Not Allowed'])
 
     data = request.get_json()
     if not data['name'] or not data['password'] or not data['balance']:
         return jsonify(['Method Not Allowed'])
 
-    # TODO: Verificar se o cliente já existe
+    # Verify if client exists.
+    existing_client = Client.query.filter_by(name=data['name']).first()
+    if existing_client:
+        return jsonify(['Client already exists']), 409
 
-    # TODO: Cadastrar na tabela de seletor 
+    client_obj = Client(id=str(uuid4()), name=data['name'], password=data['password'], balance=data['balance'])
+    db.session.add(client_obj)
+
+    # Create in table selector if not exists
+    selector_obj = Selector(id=str(uuid4()), name=data['name'], ip='127.0.0.1') #IP Exemple.
+    db.session.add(selector_obj)
+
+    # Register on Selector Service (Validator)
+    try:
+        response = requests.post('http://seletor_service/clients', json={'id': client_obj.id, 'name': client_obj.name, 'balance': client_obj.balance})
+        if response.status_code != 200:
+            return jsonify(['Failed to register with selector service']), 500
+    except requests.exceptions.RequestException as e:
+        return jsonify([str(e)]), 500
+
+
+    db.session.commit()
+    return jsonify(client_obj)
+
+    # TODO: Verificar se o cliente já existe -- Check 
+
+    # TODO: Cadastrar na tabela de seletor -- Check provavelmente errado. 
     
-    # TODO: Cadastrar no Serviço Seletor(Validador)
+    # TODO: Cadastrar no Serviço Seletor(Validador) -- Check
 
 
     client_obj = Client(name=data['name'], password=data['password'], balance=data['balance'])
