@@ -35,13 +35,14 @@ def validate_transaction(transaction):
     
 
 def send_result_to_selector(transaction):
-    url = 'http://selector-layer-url/selector/receive_validation_result'
+    url = 'http://localhost:5001/selector/receive_validation_result'
     data = {
         'transaction_id': transaction.id,
         'status': transaction.status
     }
-    response = requests.post(url, json=data)
-    return response.json()
+    # response = requests.post(url, json=data)
+    # return response.json()
+    print("Deu boa!!! PÈNIS")
 
 @app.route('/validator/receive_transaction', methods=['POST'])
 def receive_transaction():
@@ -50,15 +51,15 @@ def receive_transaction():
     
     is_valid = validate_transaction(transaction)
     
-    if is_valid:
-        consensus_result = participate_in_consensus(transaction)
-        transaction.status = 1 if consensus_result else 2
-    else:
-        transaction.status = 2
+    # # if is_valid:
+    #     consensus_result = participate_in_consensus(transaction)
+    #     transaction.status = 1 if consensus_result else 2
+    # else:
+    #     transaction.status = 2
     
     send_result_to_selector(transaction)
     
     return jsonify({'transaction_id': transaction.id, 'status': transaction.status})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run('127.0.0.1',port=5000,debug=True)
