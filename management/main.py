@@ -18,7 +18,6 @@ class Client(db.Model):
     password: str
     balance: float
     is_active: bool  # Nova coluna para soft delete
-    flags: int
     bans: int
 
     id = db.Column(db.String(32), primary_key=True)
@@ -26,7 +25,6 @@ class Client(db.Model):
     password = db.Column(db.String(20), unique=False, nullable=False)
     balance = db.Column(db.Float, unique=False, nullable=False)
     is_active = db.Column(db.Boolean, unique=False, nullable=False, default=True)  # Inicialmente ativo
-    flags = db.Column(db.Integer, unique=False, nullable=False, default=0)  # Inicialmente ativo
     bans = db.Column(db.Integer, unique=False, nullable=False, default=0)  # Inicialmente ativo
 
 @dataclass
@@ -79,6 +77,11 @@ def AddClient():
 
     # TODO: Verificar se o cliente já existe
 
+    # TODO: Cadastrar na tabela de seletor 
+    
+    # TODO: Cadastrar no Serviço Seletor(Validador)
+
+
     client_obj = Client(name=data['name'], password=data['password'], balance=data['balance'])
     db.session.add(client_obj)
     db.session.commit()
@@ -117,7 +120,7 @@ def EditClient():
         }
         return jsonify(data)
 
-        
+# TODO: Patch para banir cliente      
 
 @app.route('/client', methods=['DELETE'])
 def ApagarCliente():
@@ -162,8 +165,6 @@ def AddSelector():
 
     return jsonify(selector)
    
-        
-
 @app.route('/selector', methods=['GET'])
 def GetSelectorById(id):
     if request.method == 'GET':
@@ -191,7 +192,7 @@ def EditSelector():
         return jsonify(['Method Not Allowed'])
 
 @app.route('/seletor', methods=['DELETE'])
-def ApagarSeletor(id):
+def ApagarSeletor():
     if request.method == 'DELETE':
         data = request.get_json()
         objeto = Selector.query.get(data['id'])
@@ -224,6 +225,9 @@ def CriaTransacao():
         data = request.get_json()
         remetente = Client.query.filter_by(id=data['sender'], is_active=True).first()
         recebedor = Client.query.filter_by(id=data['receiver'], is_active=True).first()
+
+        # TODO: Selecionar Seletor
+
         # if not remetente or not recebedor:
         #     return jsonify(['Cliente não encontrado']), 404
 
@@ -256,7 +260,7 @@ def CriaTransacao():
         #         return jsonify(['Chave do seletor inválida']), 400
 
         #     # Implementar a lógica de chamada à API do seletor
-        #     url = f"http://{seletor.ip}/transacoes/"
+            # url = f"http://{seletor.ip}/transacoes/"
         #     requests.post(url, json=objeto)
 
         objeto.status = 1  # Concluída com Sucesso
@@ -289,6 +293,8 @@ def EditaTransacao():
             return jsonify(data)
     else:
         return jsonify(['Method Not Allowed'])
+
+# TODO: Patch para atualizar status
 
 @app.errorhandler(404)
 def page_not_found(error):
