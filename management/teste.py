@@ -1,10 +1,10 @@
 import requests
 
 #Criando clientes
-#response = requests.post('http://localhost:5000/cliente/clayton/1234/500')
+response = requests.post('http://localhost:5000/cliente/clayton/1234/500')
 #response = requests.post('http://localhost:5000/cliente/claytin/1234/500')
 #Editando clientes
-response = requests.post('http://localhost:5000/cliente/1/250')
+#response = requests.post('http://localhost:5000/cliente/1/250')
 #response = requests.post('http://localhost:5000/cliente/2/300')
 #response = requests.delete('http://localhost:5000/cliente/2')
 #Criando seletores
