@@ -5,6 +5,7 @@ from flask_migrate import Migrate
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import requests
+import random
 
 app = Flask(__name__)
 
@@ -98,19 +99,6 @@ def AddClient():
 
 
     db.session.commit()
-    return jsonify(client_obj)
-
-    # TODO: Verificar se o cliente já existe -- Check 
-
-    # TODO: Cadastrar na tabela de seletor -- Check provavelmente errado. 
-    
-    # TODO: Cadastrar no Serviço Seletor(Validador) -- Check
-
-
-    client_obj = Client(name=data['name'], password=data['password'], balance=data['balance'])
-    db.session.add(client_obj)
-    db.session.commit()
-
     return jsonify(client_obj)
        
 
@@ -251,32 +239,35 @@ def CriaTransacao():
         remetente = Client.query.filter_by(id=data['sender'], is_active=True).first()
         recebedor = Client.query.filter_by(id=data['receiver'], is_active=True).first()
 
-        # TODO: Selecionar Seletor
+        if not remetente or not recebedor:
+            return jsonify(['Cliente não encontrado']), 404
 
-        # if not remetente or not recebedor:
-        #     return jsonify(['Cliente não encontrado']), 404
+        # Verificação de saldo
+        if remetente.balance < data['value']:
+            return jsonify(['Saldo insuficiente']), 400
 
-        # # Verificação de saldo
-        # if remetente.qtdMoeda < valor:
-        #     return jsonify(['Saldo insuficiente']), 400
+        # Verificação de horário
+        transacoes_remetente = Transaction.query.filter_by(sender=data['sender']).order_by(Transaction.createdAt.desc()).first()
+        if transacoes_remetente and transacoes_remetente.horario >= datetime.now():
+            return jsonify(['Horário de transação inválido']), 400
 
-        # # Verificação de horário
-        # transacoes_remetente = Transacao.query.filter_by(remetente=rem).order_by(Transacao.horario.desc()).first()
-        # if transacoes_remetente and transacoes_remetente.horario >= datetime.now():
-        #     return jsonify(['Horário de transação inválido']), 400
-
-        # # Limite de transações por minuto
-        # um_minuto_atras = datetime.now() - timedelta(minutes=1)
-        # transacoes_no_ultimo_minuto = Transacao.query.filter(Transacao.remetente == rem, Transacao.horario > um_minuto_atras).count()
-        # if transacoes_no_ultimo_minuto > 100:
-        #     return jsonify(['Limite de transações excedido']), 429
+        # Limite de transações por minuto
+        um_minuto_atras = datetime.now() - timedelta(minutes=1)
+        transacoes_no_ultimo_minuto = Transaction.query.filter(Transaction.sender == data['sender'], Transaction.createdAt > um_minuto_atras).count()
+        if transacoes_no_ultimo_minuto > 100:
+            return jsonify(['Limite de transações excedido']), 429
 
         # # Criação da transação
         objeto = Transaction(sender=data['sender'], receiver=data['receiver'], value=data['value'], status=0, datetime=datetime.now())
         db.session.add(objeto)
         db.session.commit()
 
-        # seletores = Seletor.query.all()
+        seletores = Selector.query.all()
+
+        chosen_selector = random.choices(seletores)
+
+        url = f"http://{chosen_selector.ip}/transaction"
+        response = requests.post(url, json=objeto)
         # for seletor in seletores:
         #     # Verificação da chave única do seletor
         #     if seletor.chave != "chave_unica_recebida_do_validador":  # Substituir pela lógica real
@@ -288,8 +279,9 @@ def CriaTransacao():
             # url = f"http://{seletor.ip}/transacoes/"
         #     requests.post(url, json=objeto)
 
-        objeto.status = 1  # Concluída com Sucesso
+        objeto.status = response.json()['status']  # Concluída com Sucesso
         db.session.commit()
+
         return jsonify(objeto)
     else:
         return jsonify(['Method Not Allowed'])
